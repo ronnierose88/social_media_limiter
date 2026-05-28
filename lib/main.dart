@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(const SocialMediaLimiter());
@@ -28,6 +29,8 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int selectedIndex = 0;
+  List<Map<String, dynamic>> objectives = [];
+  
 
   final List<String> pageTitles = [
     'Home',
