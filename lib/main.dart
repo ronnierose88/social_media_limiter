@@ -58,10 +58,16 @@ class _MainPageState extends State<MainPage> {
 
   // Filters objectives into a list of objectives of the current date
   List<Map<String, dynamic>> get todayObjectives {
-    return objectives.where((objective) {
-      return objective['date'] == todayDate;
-    }).toList();
-  }
+    List<Map<String, dynamic>> today = [];
+
+    for (var objective in objectives) {
+      if (objective['date'] == todayDate) {
+        today.add(objective);
+      }
+    }
+
+  return today;
+}
 
   // Checks if all the objectives in the current date have been completed
   bool get allTodayObjectivesCompleted {
@@ -72,10 +78,14 @@ class _MainPageState extends State<MainPage> {
     }
 
     // True if all the objectives are completed. False if any of them are not completed
-    return todayObjectives.every((objective) {
-      return objective['completed'] == true;
-    });
-  }
+    for (var objective in todayObjectives) {
+      if (objective['completed'] == false) {
+        return false;
+      }
+    }
+
+    return true;
+      }
 
   // Adds a new objective to list with title, current date, and completed as false
   void addObjective(String title, String date) {
@@ -115,7 +125,7 @@ class _MainPageState extends State<MainPage> {
     // List of pages in the app
     final List<Widget> pages = [
       const HomeSection(),
-      const ObjectivesSection(),
+      ObjectivesSection(objectives: objectives, addObjective: addObjective, toggleObjectiveCompleted: toggleObjectiveCompleted, deleteObjective: deleteobjective),
       const AnalyticsSection(),
       const SettingsSection(),
     ];
@@ -161,14 +171,148 @@ class HomeSection extends StatelessWidget {
 }
 
 // Widget for objectives section
-class ObjectivesSection extends StatelessWidget {
-  const ObjectivesSection({super.key});
+class ObjectivesSection extends StatefulWidget {
+  // List of objectives, each containing title, date, and completed
+  final List<Map<String, dynamic>> objectives;
+
+  // Functions to add, toggle, and delete objectives
+  final Function(String, String) addObjective;
+  final Function(String) toggleObjectiveCompleted;
+  final Function(String) deleteObjective;
+
+  const ObjectivesSection({
+    super.key,
+    required this.objectives,
+    required this.addObjective,
+    required this.toggleObjectiveCompleted,
+    required this.deleteObjective,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Objectives Section'));
-  }
+  State<ObjectivesSection> createState() => _ObjectivesSectionState();
 }
+
+class _ObjectivesSectionState extends State<ObjectivesSection> {
+
+  // Controller for the text field where users input new objectives
+  final TextEditingController _objectiveController = TextEditingController();
+
+  // Stores the selected date
+  DateTime selectedDate = DateTime.now();
+
+  // Opens the date picker
+  Future<void> pickDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365))
+    );
+
+    // If a date is selected, save it
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
+  // Adds a new objective
+  void addObjective() {
+    
+    // Gets the text from text field
+    String title = _objectiveController.text.trim();
+
+    // Does not add objective if title is empty
+    if (title.isEmpty) {
+      return;
+    }
+
+    // Formats the selected date
+    String date = DateFormat('dd-MM-yyyy').format(selectedDate);
+
+    // Calls the function to add the objective
+    widget.addObjective(title, date);
+  }
+
+@override
+Widget build(BuildContext context) {
+
+  return Padding(
+    padding: const EdgeInsets.all(16.0),
+
+    child: Column(
+      children: [
+
+        // Text field for inputting new objectives
+        TextField(
+          controller: _objectiveController,
+          decoration: const InputDecoration(
+            labelText: 'New Objective',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8.0),
+
+        // Button to pick a date for the new objective
+        FilledButton(
+          onPressed: () => pickDate(context),
+          child: Text(
+            'Pick Date: ${DateFormat('dd-MM-yyyy').format(selectedDate)}',
+          ),
+        ),
+        const SizedBox(height: 8.0),
+
+        // Button to add the new objective
+        FilledButton(
+          onPressed: addObjective,
+          child: const Text('Add Objective'),
+        ),
+        const SizedBox(height: 16.0),
+
+      // Displays the list of objectives
+      Expanded(
+          child: ListView.builder(
+            itemCount: widget.objectives.length,
+            itemBuilder: (context, index) {
+              final objective = widget.objectives[index];
+              return Card(
+                child: ListTile(
+
+                  // Objective title
+                  title: Text(objective['title']),
+
+                  // Date of the objective
+                  subtitle: Text('Date: ${objective['date']}'),
+
+                  // Checkbox to mark objective as completed
+                  leading: Checkbox(
+                    value: objective['completed'],
+                    onChanged: (value) {
+                      widget.toggleObjectiveCompleted(objective['title']);
+                    },
+                  ),
+
+                    
+                  // Delete button to remove the objective
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      widget.deleteObjective(objective['title']);
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+}
+  
+// Widget for analytics section
 
 // Widget for analytics section
 class AnalyticsSection extends StatelessWidget {
