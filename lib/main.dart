@@ -124,7 +124,11 @@ class _MainPageState extends State<MainPage> {
 
     // List of pages in the app
     final List<Widget> pages = [
-      const HomeSection(),
+      HomeSection(
+      todayObjectives: todayObjectives,
+      onAddObjective: addObjective,
+      onToggleObjectiveCompleted: toggleObjectiveCompleted,
+      ), // Pass data and functions to HomeSection
       ObjectivesSection(objectives: objectives, addObjective: addObjective, toggleObjectiveCompleted: toggleObjectiveCompleted, deleteObjective: deleteobjective),
       const AnalyticsSection(),
       const SettingsSection(),
@@ -161,14 +165,284 @@ class _MainPageState extends State<MainPage> {
 }
 
 // Widget for home section
-class HomeSection extends StatelessWidget {
-  const HomeSection({super.key});
+class HomeSection extends StatefulWidget {
+
+  // List of objectives for the current day
+  final List<Map<String, dynamic>> todayObjectives;
+
+  // Functions to add and toggle objectives
+  final Function(String, String) onAddObjective;
+  final Function(String) onToggleObjectiveCompleted;
+
+  const HomeSection({
+    super.key,
+    required this.todayObjectives,
+    required this.onAddObjective,
+    required this.onToggleObjectiveCompleted,
+  });
+
+  @override
+  State<HomeSection> createState() {
+    return _HomeSectionState();
+  }
+}
+
+
+class _HomeSectionState extends State<HomeSection> {
+
+  // Controller for the quick add objective text field
+  final TextEditingController _objectiveController =
+      TextEditingController();
+
+
+  // Gives the current date in proper format
+  String get todayDate {
+    return DateFormat('dd-MM-yyyy').format(DateTime.now());
+  }
+
+
+  // Adds a new objective for the current day
+  void quickAddObjective() {
+
+    // Gets the text from the text field
+    String title = _objectiveController.text.trim();
+
+    // Does not add an objective if the title is empty
+    if (title.isEmpty) {
+      return;
+    }
+
+    // Adds the objective using today's date
+    widget.onAddObjective(title, todayDate);
+
+    // Clears the text field after adding the objective
+    _objectiveController.clear();
+  }
+
+
+  // Counts how many of today's objectives are completed
+  int getCompletedCount() {
+
+    int completedCount = 0;
+
+    // Goes through each objective for today
+    for (var objective in widget.todayObjectives) {
+
+      // Adds one to the count if the objective is completed
+      if (objective['completed'] == true) {
+        completedCount = completedCount + 1;
+      }
+    }
+
+    return completedCount;
+  }
+
+
+  // Checks if every objective for today has been completed
+  bool checkAllCompleted() {
+
+    // Returns false if there are no objectives today
+    if (widget.todayObjectives.isEmpty) {
+      return false;
+    }
+
+    // Goes through each objective for today
+    for (var objective in widget.todayObjectives) {
+
+      // Returns false if an objective has not been completed
+      if (objective['completed'] == false) {
+        return false;
+      }
+    }
+
+    // Returns true if all objectives have been completed
+    return true;
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Home Section'));
+
+    // Stores how many objectives are completed
+    int completedCount = getCompletedCount();
+
+    // Stores whether all today's objectives are completed
+    bool allCompleted = checkAllCompleted();
+
+    // Social media is locked when objectives are not all completed
+    bool shouldLock = true;
+
+    if (allCompleted == true) {
+      shouldLock = false;
+    }
+
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+
+      children: [
+
+        // Card showing whether social media is locked or unlocked
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+
+            child: Column(
+              children: [
+
+                // Lock or unlock icon
+                Icon(
+                  shouldLock ? Icons.lock : Icons.lock_open,
+                  size: 70,
+                  color: shouldLock ? Colors.red : Colors.green,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Lock status text
+                Text(
+                  shouldLock
+                      ? 'Social Media Locked'
+                      : 'Social Media Unlocked',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Message explaining the current lock status
+                Text(
+                  shouldLock
+                      ? 'Complete your objectives for today to unlock social media access.'
+                      : 'Congratulations! You have completed all your objectives for today.',
+                  style: const TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+
+        const SizedBox(height: 12),
+
+
+        // Card showing today's objective progress
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.task_alt),
+            title: const Text('Todays Progress'),
+            subtitle: Text(
+              '$completedCount of ${widget.todayObjectives.length} objectives completed',
+            ),
+          ),
+        ),
+
+
+        const SizedBox(height: 12),
+
+
+        // Card containing quick add and today's objectives
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+
+            child: Column(
+              children: [
+
+                // Text field for quickly adding an objective for today
+                TextField(
+                  controller: _objectiveController,
+                  decoration: const InputDecoration(
+                    labelText: 'Quick add objective for today',
+                    hintText: 'Example: Finish homework',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
+
+                const SizedBox(height: 8),
+
+
+                // Button to add the objective
+                FilledButton(
+                  onPressed: quickAddObjective,
+                  child: const Text('Add Objective'),
+                ),
+
+
+                const SizedBox(height: 16),
+
+
+                // Heading for today's objectives
+                const Text(
+                  'Todays Objectives',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+
+                const SizedBox(height: 8),
+
+
+                // Shows a message if there are no objectives today
+                if (widget.todayObjectives.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'No objectives for today. Add some to get started!',
+                    ),
+                  ),
+
+
+                // Creates the list of today's objectives
+                if (widget.todayObjectives.isNotEmpty)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+
+                    // Number of objectives for today
+                    itemCount: widget.todayObjectives.length,
+
+                    itemBuilder: (context, index) {
+
+                      // Gets the objective at the current position
+                      final objective =
+                          widget.todayObjectives[index];
+
+                      return Card(
+                        child: CheckboxListTile(
+
+                          // Shows whether the objective is completed
+                          value: objective['completed'],
+
+                          // Shows the objective title
+                          title: Text(objective['title']),
+
+                          // Changes the completed status when checkbox is pressed
+                          onChanged: (value) {
+                            widget.onToggleObjectiveCompleted(
+                              objective['title'],
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
+
 
 // Widget for objectives section
 class ObjectivesSection extends StatefulWidget {
@@ -195,7 +469,8 @@ class ObjectivesSection extends StatefulWidget {
 class _ObjectivesSectionState extends State<ObjectivesSection> {
 
   // Controller for the text field where users input new objectives
-  final TextEditingController _objectiveController = TextEditingController();
+  final TextEditingController _objectiveController =
+    TextEditingController();
 
   // Stores the selected date
   DateTime selectedDate = DateTime.now();
