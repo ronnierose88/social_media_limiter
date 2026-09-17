@@ -42,6 +42,10 @@ class _MainPageState extends State<MainPage> {
   // 0 = Home, 1 = Objectives, 2 = Analytics, 3 = Settings
   int selectedIndex = 0;
 
+  // Stores the start and end time for social media restrictions
+  TimeOfDay restrictionStartTime = const TimeOfDay(hour: 22, minute: 0);
+  TimeOfDay restrictionEndTime = const TimeOfDay(hour: 7, minute: 0);
+
   // Stores all objectives, each containing title, date, and completed
   List<Map<String, dynamic>> objectives = [];
 
@@ -58,18 +62,86 @@ class _MainPageState extends State<MainPage> {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
   }
 
-  // Filters objectives into a list of objectives of the current date
-  List<Map<String, dynamic>> get todayObjectives {
-    List<Map<String, dynamic>> today = [];
+  // Opens a time picker for the restriction start time
+  Future<void> pickRestrictionStartTime(BuildContext context) async {
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: restrictionStartTime,
+    );
 
-    for (var objective in objectives) {
-      if (objective['date'] == todayDate) {
-        today.add(objective);
+    if (pickedTime != null) {
+      setState(() {
+        restrictionStartTime = pickedTime;
+      });
+    }
+  }
+
+
+  // Opens a time picker for the restriction end time
+  Future<void> pickRestrictionEndTime(BuildContext context) async {
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: restrictionEndTime,
+    );
+
+    if (pickedTime != null) {
+      setState(() {
+        restrictionEndTime = pickedTime;
+      });
+    }
+  }
+  // Checks if the current time is inside the restriction period
+  bool isRestrictionTime() {
+
+    // Gets the current time
+    TimeOfDay currentTime = TimeOfDay.now();
+
+    // Converts each time into minutes
+    int currentMinutes =
+        currentTime.hour * 60 + currentTime.minute;
+
+    int startMinutes =
+        restrictionStartTime.hour * 60 + restrictionStartTime.minute;
+
+    int endMinutes =
+        restrictionEndTime.hour * 60 + restrictionEndTime.minute;
+
+
+    // Restriction starts and ends on the same day
+    if (startMinutes < endMinutes) {
+
+      if (currentMinutes >= startMinutes &&
+          currentMinutes < endMinutes) {
+        return true;
       }
     }
 
-  return today;
-}
+
+    // Restriction goes overnight
+    else {
+
+      if (currentMinutes >= startMinutes ||
+          currentMinutes < endMinutes) {
+        return true;
+      }
+    }
+
+
+    return false;
+  }
+
+    // Filters objectives into a list of objectives of the current date
+    List<Map<String, dynamic>> get todayObjectives {
+      List<Map<String, dynamic>> today = [];
+
+      for (var objective in objectives) {
+        if (objective['date'] == todayDate) {
+          today.add(objective);
+        }
+      }
+
+    return today;
+  }
 
   // Checks if all the objectives in the current date have been completed
   bool get allTodayObjectivesCompleted {
@@ -130,10 +202,16 @@ class _MainPageState extends State<MainPage> {
       todayObjectives: todayObjectives,
       onAddObjective: addObjective,
       onToggleObjectiveCompleted: toggleObjectiveCompleted,
+      isRestrictionTime: isRestrictionTime()
       ), // Pass data and functions to HomeSection
       ObjectivesSection(objectives: objectives, addObjective: addObjective, toggleObjectiveCompleted: toggleObjectiveCompleted, deleteObjective: deleteobjective),
       const AnalyticsSection(),
-      const SettingsSection(),
+      SettingsSection(
+      restrictionStartTime: restrictionStartTime,
+      restrictionEndTime: restrictionEndTime,
+      pickStartTime: pickRestrictionStartTime,
+      pickEndTime: pickRestrictionEndTime,
+    ),
     ];
 
     return Scaffold(
@@ -176,11 +254,15 @@ class HomeSection extends StatefulWidget {
   final Function(String, String) onAddObjective;
   final Function(String) onToggleObjectiveCompleted;
 
+  // Checks if the current time is within the restriction period
+  final bool isRestrictionTime;
+
   const HomeSection({
     super.key,
     required this.todayObjectives,
     required this.onAddObjective,
     required this.onToggleObjectiveCompleted,
+    required this.isRestrictionTime,
   });
 
   @override
@@ -271,11 +353,12 @@ class _HomeSectionState extends State<HomeSection> {
     // Stores whether all today's objectives are completed
     bool allCompleted = checkAllCompleted();
 
-    // Social media is locked when objectives are not all completed
-    bool shouldLock = true;
+    // Determines whether social media should be locked or unlocked
+    bool shouldLock = false;
 
-    if (allCompleted == true) {
-      shouldLock = false;
+    // Lock if objectives are incomplete or it is restriction time
+    if (allCompleted == false || widget.isRestrictionTime == true) {
+      shouldLock = true;
     }
 
 
@@ -603,10 +686,83 @@ class AnalyticsSection extends StatelessWidget {
 
 // Widget for settings section
 class SettingsSection extends StatelessWidget {
-  const SettingsSection({super.key});
+
+  final TimeOfDay restrictionStartTime;
+  final TimeOfDay restrictionEndTime;
+
+  final Function(BuildContext) pickStartTime;
+  final Function(BuildContext) pickEndTime;
+
+
+  const SettingsSection({
+    super.key,
+    required this.restrictionStartTime,
+    required this.restrictionEndTime,
+    required this.pickStartTime,
+    required this.pickEndTime,
+  });
+
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Settings Section'));
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+
+      child: Column(
+        children: [
+
+          const Text(
+            'Restriction Period',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+
+          // Restriction start time
+          Card(
+            child: ListTile(
+              title: const Text('Start Time'),
+
+              subtitle: Text(
+                restrictionStartTime.format(context),
+              ),
+
+              trailing: const Icon(Icons.access_time),
+
+              onTap: () {
+                pickStartTime(context);
+              },
+            ),
+          ),
+
+
+          const SizedBox(height: 10),
+
+
+          // Restriction end time
+          Card(
+            child: ListTile(
+              title: const Text('End Time'),
+
+              subtitle: Text(
+                restrictionEndTime.format(context),
+              ),
+
+              trailing: const Icon(Icons.access_time),
+
+              onTap: () {
+                pickEndTime(context);
+              },
+            ),
+          ),
+
+        ],
+      ),
+    );
   }
 }
