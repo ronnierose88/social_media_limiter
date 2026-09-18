@@ -361,6 +361,31 @@ class _HomeSectionState extends State<HomeSection> {
       shouldLock = true;
     }
 
+    String lockMessage = '';
+
+    // Message if social media is unlocked
+    if (shouldLock == false) {
+      lockMessage = 'Social media is currently unlocked.';
+    }
+
+    // Message if locked because of objectives and restricted time
+    else if (allCompleted == false &&
+        widget.isRestrictionTime == true) {
+      lockMessage =
+          'Complete your objectives and wait until the restricted time is over to unlock social media.';
+    }
+
+    // Message if locked because objectives are incomplete
+    else if (allCompleted == false) {
+      lockMessage =
+          'Complete your objectives for today to unlock social media access.';
+    }
+
+    // Message if locked only because of restricted time
+    else if (widget.isRestrictionTime == true) {
+      lockMessage =
+          'Social media is locked because it is currently within your restricted time.';
+    }
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -400,10 +425,7 @@ class _HomeSectionState extends State<HomeSection> {
 
                 // Message explaining the current lock status
                 Text(
-                  shouldLock
-                      ? 'Complete your objectives for today to unlock social media access.'
-                      : 'Congratulations! You have completed all your objectives for today.',
-                  style: const TextStyle(fontSize: 16),
+                  lockMessage,
                   textAlign: TextAlign.center,
                 ),
               ],
