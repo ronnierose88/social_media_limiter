@@ -46,6 +46,9 @@ class _MainPageState extends State<MainPage> {
   TimeOfDay restrictionStartTime = const TimeOfDay(hour: 22, minute: 0);
   TimeOfDay restrictionEndTime = const TimeOfDay(hour: 7, minute: 0);
 
+  // Stores the next objective ID to be assigned
+  int nextObjectiveId = 0;
+
   // Stores all objectives, each containing title, date, and completed
   List<Map<String, dynamic>> objectives = [];
 
@@ -163,21 +166,24 @@ class _MainPageState extends State<MainPage> {
 
   // Adds a new objective to list with title, current date, and completed as false
   void addObjective(String title, String date) {
-    final newObjective = {'title': title, 'date': date, 'completed': false};
+    final newObjective = {'id': nextObjectiveId, 'title': title, 'date': date, 'completed': false};
 
     // Updates the state of the app to include the new objective
     setState(() {
       objectives.add(newObjective);
+
+      // Increases the next objective ID for the next objective to be added
+      nextObjectiveId = nextObjectiveId + 1;
     });
   }
 
   // Changes objective between completed and incompleted
-  void toggleObjectiveCompleted(String title) {
+  void toggleObjectiveCompleted(int id) {
     setState(() {
 
       // Searches through all objectives and toggles the completed status of the one with the matching title
       for (final objective in objectives) {
-        if (objective['title'] == title) {
+        if (objective['id'] == id) {
           objective['completed'] = !objective['completed'];
         }
       }
@@ -185,10 +191,10 @@ class _MainPageState extends State<MainPage> {
   }
 
   // Deletes an objective with the matching title from the list of objectives
-  void deleteobjective(String title) {
+  void deleteobjective(int id) {
     setState(() {
       objectives.removeWhere((objective) {
-        return objective['title'] == title;
+        return objective['id'] == id;
       });
     });
   }
@@ -252,7 +258,7 @@ class HomeSection extends StatefulWidget {
 
   // Functions to add and toggle objectives
   final Function(String, String) onAddObjective;
-  final Function(String) onToggleObjectiveCompleted;
+  final Function(int) onToggleObjectiveCompleted;
 
   // Checks if the current time is within the restriction period
   final bool isRestrictionTime;
@@ -534,7 +540,7 @@ class _HomeSectionState extends State<HomeSection> {
                           // Changes the completed status when checkbox is pressed
                           onChanged: (value) {
                             widget.onToggleObjectiveCompleted(
-                              objective['title'],
+                              objective['id'],
                             );
                           },
                         ),
@@ -558,8 +564,8 @@ class ObjectivesSection extends StatefulWidget {
 
   // Functions to add, toggle, and delete objectives
   final Function(String, String) addObjective;
-  final Function(String) toggleObjectiveCompleted;
-  final Function(String) deleteObjective;
+  final Function(int) toggleObjectiveCompleted;
+  final Function(int) deleteObjective;
 
   const ObjectivesSection({
     super.key,
@@ -671,7 +677,7 @@ Widget build(BuildContext context) {
                   leading: Checkbox(
                     value: objective['completed'],
                     onChanged: (value) {
-                      widget.toggleObjectiveCompleted(objective['title']);
+                      widget.toggleObjectiveCompleted(objective['id']);
                     },
                   ),
 
@@ -680,7 +686,7 @@ Widget build(BuildContext context) {
                   trailing: IconButton(
                     icon: const Icon(Icons.delete),
                     onPressed: () {
-                      widget.deleteObjective(objective['title']);
+                      widget.deleteObjective(objective['id']);
                     },
                   ),
                 ),
