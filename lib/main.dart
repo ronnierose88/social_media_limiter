@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 // Starting point of application, launches SocialMediaLimiter widget
 void main() {
@@ -42,6 +43,9 @@ class _MainPageState extends State<MainPage> {
   // 0 = Home, 1 = Objectives, 2 = Analytics, 3 = Settings
   int selectedIndex = 0;
 
+  // Timer that updates the restriction status continuously
+  Timer? restrictionTimer;
+
   // Stores the start and end time for social media restrictions
   TimeOfDay restrictionStartTime = const TimeOfDay(hour: 22, minute: 0);
   TimeOfDay restrictionEndTime = const TimeOfDay(hour: 7, minute: 0);
@@ -64,6 +68,30 @@ class _MainPageState extends State<MainPage> {
   String get todayDate {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
   }
+
+  // Runs when MainPage first starts
+  @override
+  void initState() {
+    super.initState();
+
+    // Runs every minute so the current time is checked again
+    restrictionTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (timer) {
+
+        // Updates the state of the app to check if it is restriction time again
+        setState(() {});
+      },
+    );
+  }
+
+  // Cancels the timer when MainPage is closed
+  @override
+  void dispose() {
+    restrictionTimer?.cancel();
+    super.dispose();
+  }
+
 
   // Opens a time picker for the restriction start time
   Future<void> pickRestrictionStartTime(BuildContext context) async {
