@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   app_usage: ^4.1.0
-  app_blocker: ^2.0.0
+  app_blocker: ^2.1.0
   intl: ^0.19.0
   shared_preferences: ^2.5.3
 

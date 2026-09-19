@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'package:app_blocker/app_blocker.dart';
 
 // Starting point of application, launches SocialMediaLimiter widget
 void main() {
@@ -64,6 +65,18 @@ class _MainPageState extends State<MainPage> {
     'Settings',
   ];
 
+  // Stores the package names of the social media apps to block
+  final List<String> socialMediaApps = [
+    // Instagram, TikTok, Snapchat, Facebook, X/Twitter
+    'com.instagram.android',
+    'com.zhiliaoapp.musically',
+    'com.snapchat.android',
+    'com.facebook.katana',
+    'com.twitter.android',
+  ];
+  // App blocker used to block social media apps
+  final AppBlocker appBlocker = AppBlocker.instance;
+
   // Gives the current date in proper format
   String get todayDate {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
@@ -74,6 +87,12 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
 
+    // Requests permission to block apps
+    appBlocker.requestPermission();
+
+    // Updates the app blocking status when the app first starts
+    updateAppBlocking();
+
     // Runs every minute so the current time is checked again
     restrictionTimer = Timer.periodic(
       const Duration(minutes: 1),
@@ -81,6 +100,9 @@ class _MainPageState extends State<MainPage> {
 
         // Updates the state of the app to check if it is restriction time again
         setState(() {});
+
+        // Updates the app blocking status after checking the time
+        updateAppBlocking();
       },
     );
   }
@@ -104,7 +126,10 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         restrictionStartTime = pickedTime;
       });
+      // Updates the app blocking status after changing the restriction start time
+      updateAppBlocking();
     }
+
   }
 
 
@@ -119,6 +144,8 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         restrictionEndTime = pickedTime;
       });
+      // Updates the app blocking status after changing the restriction end time
+      updateAppBlocking();
     }
   }
   // Checks if the current time is inside the restriction period
@@ -192,6 +219,40 @@ class _MainPageState extends State<MainPage> {
     return true;
       }
 
+  // Checks if social media should currently be locked
+  bool shouldLockSocialMedia() {
+
+    // Locks social media if today's objectives are not completed
+    if (allTodayObjectivesCompleted == false) {
+      return true;
+    }
+
+
+    // Locks social media if it is currently restriction time
+    if (isRestrictionTime() == true) {
+      return true;
+    }
+
+
+    // Unlocks social media if all objectives are completed and it is not restriction time
+    return false;
+  }
+
+  // Updates whether the social media apps are blocked or unblocked
+  Future<void> updateAppBlocking() async {
+
+    // Blocks the social media apps if they should be locked
+    if (shouldLockSocialMedia() == true) {
+      await appBlocker.blockApps(socialMediaApps);
+    }
+
+
+    // Unblocks the social media apps if they should be unlocked
+    else {
+      await appBlocker.unblockApps(socialMediaApps);
+    }
+  }
+
   // Adds a new objective to list with title, current date, and completed as false
   void addObjective(String title, String date) {
     final newObjective = {'id': nextObjectiveId, 'title': title, 'date': date, 'completed': false};
@@ -203,6 +264,8 @@ class _MainPageState extends State<MainPage> {
       // Increases the next objective ID for the next objective to be added
       nextObjectiveId = nextObjectiveId + 1;
     });
+    // Updates the app blocking status after adding a new objective
+    updateAppBlocking();
   }
 
   // Changes objective between completed and incompleted
@@ -216,6 +279,8 @@ class _MainPageState extends State<MainPage> {
         }
       }
     });
+    // Updates the app blocking status after toggling an objective's completed status
+    updateAppBlocking();
   }
 
   // Deletes an objective with the matching title from the list of objectives
@@ -225,6 +290,8 @@ class _MainPageState extends State<MainPage> {
         return objective['id'] == id;
       });
     });
+    // Updates the app blocking status after deleting an objective
+    updateAppBlocking();
   }
 
   @override
@@ -237,6 +304,8 @@ class _MainPageState extends State<MainPage> {
       onAddObjective: addObjective,
       onToggleObjectiveCompleted: toggleObjectiveCompleted,
       isRestrictionTime: isRestrictionTime()
+      // Pass lock status to HomeSection
+      shouldLock: shouldLockSocialMedia()
       ), // Pass data and functions to HomeSection
       ObjectivesSection(objectives: objectives, addObjective: addObjective, toggleObjectiveCompleted: toggleObjectiveCompleted, deleteObjective: deleteobjective),
       const AnalyticsSection(),
@@ -281,6 +350,9 @@ class _MainPageState extends State<MainPage> {
 // Widget for home section
 class HomeSection extends StatefulWidget {
 
+  // Stores if social media should be locked or unlocked
+  final bool shouldLock;
+
   // List of objectives for the current day
   final List<Map<String, dynamic>> todayObjectives;
 
@@ -291,12 +363,14 @@ class HomeSection extends StatefulWidget {
   // Checks if the current time is within the restriction period
   final bool isRestrictionTime;
 
+
   const HomeSection({
     super.key,
     required this.todayObjectives,
     required this.onAddObjective,
     required this.onToggleObjectiveCompleted,
     required this.isRestrictionTime,
+    required this.shouldLock,
   });
 
   @override
@@ -387,18 +461,10 @@ class _HomeSectionState extends State<HomeSection> {
     // Stores whether all today's objectives are completed
     bool allCompleted = checkAllCompleted();
 
-    // Determines whether social media should be locked or unlocked
-    bool shouldLock = false;
-
-    // Lock if objectives are incomplete or it is restriction time
-    if (allCompleted == false || widget.isRestrictionTime == true) {
-      shouldLock = true;
-    }
-
     String lockMessage = '';
 
     // Message if social media is unlocked
-    if (shouldLock == false) {
+    if (widget.shouldLock == false) {
       lockMessage = 'Social media is currently unlocked.';
     }
 
@@ -436,16 +502,16 @@ class _HomeSectionState extends State<HomeSection> {
 
                 // Lock or unlock icon
                 Icon(
-                  shouldLock ? Icons.lock : Icons.lock_open,
+                  widget.shouldLock ? Icons.lock : Icons.lock_open,
                   size: 70,
-                  color: shouldLock ? Colors.red : Colors.green,
+                  color: widget.shouldLock ? Colors.red : Colors.green,
                 ),
 
                 const SizedBox(height: 12),
 
                 // Lock status text
                 Text(
-                  shouldLock
+                  widget.shouldLock
                       ? 'Social Media Locked'
                       : 'Social Media Unlocked',
                   style: const TextStyle(
@@ -649,6 +715,7 @@ class _ObjectivesSectionState extends State<ObjectivesSection> {
 
     // Calls the function to add the objective
     widget.addObjective(title, date);
+
   }
 
 @override
