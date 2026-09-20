@@ -67,12 +67,13 @@ class _MainPageState extends State<MainPage> {
 
   // Stores the package names of the social media apps to block
   final List<String> socialMediaApps = [
-    // Instagram, TikTok, Snapchat, Facebook, X/Twitter
+    // Instagram, TikTok, Snapchat, Facebook, X/Twitter, YouTube
     'com.instagram.android',
     'com.zhiliaoapp.musically',
     'com.snapchat.android',
     'com.facebook.katana',
     'com.twitter.android',
+    'com.google.android.youtube',
   ];
   // App blocker used to block social media apps
   final AppBlocker appBlocker = AppBlocker.instance;
@@ -82,13 +83,69 @@ class _MainPageState extends State<MainPage> {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
   }
 
+  // Checks if app blocking permission has already been enabled
+  Future<void> checkBlockerPermission() async {
+
+    final status = await appBlocker.checkPermission();
+
+    // Shows instructions only if permission has not been enabled
+    if (status != BlockerPermissionStatus.granted) {
+      showPermissionInstructions();
+    }
+  }
+
+  // Shows instructions before opening Android permission settings
+  void showPermissionInstructions() {
+
+    showDialog(
+      context: context,
+      builder: (context) {
+
+        return AlertDialog(
+          title: const Text('Enable App Blocking'),
+          content: const Text(
+            'To enable app blocking, turn on the permissions in the Android settings that open. You will be prompted to enable both the App Blocker Accessibility and Alarms & reminders. Return to the app after enabling each permission.',
+          ),
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+
+            FilledButton(
+              onPressed: () async {
+
+                Navigator.pop(context);
+
+                // Opens Android settings for the required permission
+                await appBlocker.requestPermission();
+
+                // Checks for permissions again after returning from settings
+                checkBlockerPermission();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // Runs when MainPage first starts
   @override
   void initState() {
     super.initState();
 
-    // Requests permission to block apps
-    appBlocker.requestPermission();
+    // Delays the permission instructions to allow the app to fully load before showing the dialog
+    Future.delayed(
+      const Duration(milliseconds: 500),
+      () {
+        checkBlockerPermission();
+      },
+    );
 
     // Updates the app blocking status when the app first starts
     updateAppBlocking();
@@ -299,11 +356,11 @@ class _MainPageState extends State<MainPage> {
 
     // List of pages in the app
     final List<Widget> pages = [
-      HomeSection(
+      HomeSection(  
       todayObjectives: todayObjectives,
       onAddObjective: addObjective,
       onToggleObjectiveCompleted: toggleObjectiveCompleted,
-      isRestrictionTime: isRestrictionTime()
+      isRestrictionTime: isRestrictionTime(),
       // Pass lock status to HomeSection
       shouldLock: shouldLockSocialMedia()
       ), // Pass data and functions to HomeSection
