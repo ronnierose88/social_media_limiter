@@ -40,7 +40,6 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  
   // Stores which navigation tab is selected
   // 0 = Home, 1 = Objectives, 2 = Analytics, 3 = Settings
   int selectedIndex = 0;
@@ -58,13 +57,8 @@ class _MainPageState extends State<MainPage> {
   // Stores today's total social media usage in minutes
   int todayUsage = 0;
 
-
   // Stores this week's total social media usage in minutes
   int thisWeekUsage = 0;
-
-
-  // Stores last week's total social media usage in minutes
-  int lastWeekUsage = 0;
 
   // Stores all objectives, each containing title, date, and completed
   List<Map<String, dynamic>> objectives = [];
@@ -92,25 +86,21 @@ class _MainPageState extends State<MainPage> {
   }
 
   // Calculates total social media usage between two dates
-  Future<int> calculateUsage(
-      DateTime startDate,
-      DateTime endDate) async {
-
+  Future<int> calculateUsage(DateTime startDate, DateTime endDate) async {
     // Gets the app usage between the selected dates
-    List<AppUsageInfo> usageInfo =
-        await AppUsage().getAppUsage(startDate, endDate);
+    List<AppUsageInfo> usageInfo = await AppUsage().getAppUsage(
+      startDate,
+      endDate,
+    );
 
     int totalMinutes = 0;
 
     // Goes through each app returned
     for (final app in usageInfo) {
-
       // Only counts the usage of the apps that are selected to be blocked
       if (selectedApps.contains(app.packageName)) {
-
         // Adds the app usage to the total
-        totalMinutes =
-            totalMinutes + app.usage.inMinutes;
+        totalMinutes = totalMinutes + app.usage.inMinutes;
       }
     }
 
@@ -120,220 +110,118 @@ class _MainPageState extends State<MainPage> {
 
   // Saves the app data
   Future<void> saveData() async {
-
     // Gets access to shared preferences
-    final prefs =
-        await SharedPreferences.getInstance();
-
+    final prefs = await SharedPreferences.getInstance();
 
     // Converts the objectives list into text
-    String objectivesText =
-        jsonEncode(objectives);
-
+    String objectivesText = jsonEncode(objectives);
 
     // Saves the objectives
-    await prefs.setString(
-      'objectives',
-      objectivesText,
-    );
-
+    await prefs.setString('objectives', objectivesText);
 
     // Saves the next objective ID
-    await prefs.setInt(
-      'nextObjectiveId',
-      nextObjectiveId,
-    );
-
+    await prefs.setInt('nextObjectiveId', nextObjectiveId);
 
     // Saves the restriction start time
-    await prefs.setInt(
-      'restrictionStartHour',
-      restrictionStartTime.hour,
-    );
+    await prefs.setInt('restrictionStartHour', restrictionStartTime.hour);
 
-    await prefs.setInt(
-      'restrictionStartMinute',
-      restrictionStartTime.minute,
-    );
-
+    await prefs.setInt('restrictionStartMinute', restrictionStartTime.minute);
 
     // Saves the restriction end time
-    await prefs.setInt(
-      'restrictionEndHour',
-      restrictionEndTime.hour,
-    );
+    await prefs.setInt('restrictionEndHour', restrictionEndTime.hour);
 
-    await prefs.setInt(
-      'restrictionEndMinute',
-      restrictionEndTime.minute,
-    );
-
+    await prefs.setInt('restrictionEndMinute', restrictionEndTime.minute);
 
     // Saves the apps selected to be blocked
-    await prefs.setStringList(
-      'selectedApps',
-      selectedApps,
-    );
+    await prefs.setStringList('selectedApps', selectedApps);
   }
 
-// Loads the saved app data
-Future<void> loadData() async {
+  // Loads the saved app data
+  Future<void> loadData() async {
+    // Gets access to shared preferences
+    final prefs = await SharedPreferences.getInstance();
 
-  // Gets access to shared preferences
-  final prefs =
-      await SharedPreferences.getInstance();
+    // Gets the saved objectives
+    String? objectivesText = prefs.getString('objectives');
 
+    // Loads the objectives if they have been saved before
+    if (objectivesText != null) {
+      // Converts the saved text back into a list
+      List<dynamic> savedObjectives = jsonDecode(objectivesText);
 
-  // Gets the saved objectives
-  String? objectivesText =
-      prefs.getString('objectives');
+      objectives = savedObjectives
+          .map((objective) => Map<String, dynamic>.from(objective))
+          .toList();
+    }
 
+    // Gets the saved next objective ID
+    int? savedNextObjectiveId = prefs.getInt('nextObjectiveId');
 
-  // Loads the objectives if they have been saved before
-  if (objectivesText != null) {
+    // Loads the next objective ID if it exists
+    if (savedNextObjectiveId != null) {
+      nextObjectiveId = savedNextObjectiveId;
+    }
 
-    // Converts the saved text back into a list
-    List<dynamic> savedObjectives =
-        jsonDecode(objectivesText);
+    // Gets the saved restriction start time
+    int? startHour = prefs.getInt('restrictionStartHour');
 
+    int? startMinute = prefs.getInt('restrictionStartMinute');
 
-    objectives =
-        savedObjectives
-            .map((objective) =>
-                Map<String, dynamic>.from(objective))
-            .toList();
+    // Gets the saved restriction end time
+    int? endHour = prefs.getInt('restrictionEndHour');
+
+    int? endMinute = prefs.getInt('restrictionEndMinute');
+
+    // Loads the start time if it exists
+    if (startHour != null && startMinute != null) {
+      restrictionStartTime = TimeOfDay(hour: startHour, minute: startMinute);
+    }
+
+    // Loads the end time if it exists
+    if (endHour != null && endMinute != null) {
+      restrictionEndTime = TimeOfDay(hour: endHour, minute: endMinute);
+    }
+
+    // Gets the saved selected apps
+    List<String>? savedSelectedApps = prefs.getStringList('selectedApps');
+
+    // Loads the selected apps if they exist
+    if (savedSelectedApps != null) {
+      selectedApps = savedSelectedApps;
+    }
+
+    // Updates the app with all the loaded data
+    setState(() {});
   }
-
-
-  // Gets the saved next objective ID
-  int? savedNextObjectiveId =
-      prefs.getInt('nextObjectiveId');
-
-
-  // Loads the next objective ID if it exists
-  if (savedNextObjectiveId != null) {
-    nextObjectiveId =
-        savedNextObjectiveId;
-  }
-
-
-  // Gets the saved restriction start time
-  int? startHour =
-      prefs.getInt('restrictionStartHour');
-
-  int? startMinute =
-      prefs.getInt('restrictionStartMinute');
-
-
-  // Gets the saved restriction end time
-  int? endHour =
-      prefs.getInt('restrictionEndHour');
-
-  int? endMinute =
-      prefs.getInt('restrictionEndMinute');
-
-
-  // Loads the start time if it exists
-  if (startHour != null &&
-      startMinute != null) {
-
-    restrictionStartTime =
-        TimeOfDay(
-          hour: startHour,
-          minute: startMinute,
-        );
-  }
-
-
-  // Loads the end time if it exists
-  if (endHour != null &&
-      endMinute != null) {
-
-    restrictionEndTime =
-        TimeOfDay(
-          hour: endHour,
-          minute: endMinute,
-        );
-  }
-
-
-  // Gets the saved selected apps
-  List<String>? savedSelectedApps =
-      prefs.getStringList('selectedApps');
-
-
-  // Loads the selected apps if they exist
-  if (savedSelectedApps != null) {
-    selectedApps =
-        savedSelectedApps;
-  }
-
-
-  // Updates the app with all the loaded data
-  setState(() {});
-}
 
   // Calculates today's, this week's and last week's usage
   Future<void> updateAnalytics() async {
-
     // Gets the current date and time
     DateTime now = DateTime.now();
 
-
     // Gets the start of today
-    DateTime todayStart =
-        DateTime(now.year, now.month, now.day);
-
+    DateTime todayStart = DateTime(now.year, now.month, now.day);
 
     // Finds the start of the current week
-    DateTime thisWeekStart =
-        todayStart.subtract(
-          Duration(days: now.weekday - 1),
-        );
-
-
-    // Finds the start of last week
-    DateTime lastWeekStart =
-        thisWeekStart.subtract(
-          const Duration(days: 7),
-        );
-
+    DateTime thisWeekStart = todayStart.subtract(
+      Duration(days: now.weekday - 1),
+    );
 
     // Calculates today's usage
-    int newTodayUsage =
-        await calculateUsage(
-          todayStart,
-          now,
-        );
-
+    int newTodayUsage = await calculateUsage(todayStart, now);
 
     // Calculates this week's usage
-    int newThisWeekUsage =
-        await calculateUsage(
-          thisWeekStart,
-          now,
-        );
-
-
-    // Calculates last week's usage
-    int newLastWeekUsage =
-        await calculateUsage(
-          lastWeekStart,
-          thisWeekStart,
-        );
-
+    int newThisWeekUsage = await calculateUsage(thisWeekStart, now);
 
     // Updates the displayed usage values
     setState(() {
       todayUsage = newTodayUsage;
       thisWeekUsage = newThisWeekUsage;
-      lastWeekUsage = newLastWeekUsage;
     });
   }
 
   // Loads the apps installed on the device
   Future<void> loadInstalledApps() async {
-
     // Gets the installed apps using app_blocker
     installedApps = await appBlocker.getApps();
 
@@ -343,7 +231,6 @@ Future<void> loadData() async {
 
   // Checks if app blocking permission has already been enabled
   Future<void> checkBlockerPermission() async {
-
     final status = await appBlocker.checkPermission();
 
     // Shows instructions only if permission has not been enabled
@@ -354,14 +241,11 @@ Future<void> loadData() async {
 
   // Changes whether an app is selected to be blocked
   void selectApp(String packageName, bool selected) {
-
     setState(() {
-
       // Adds the app if it was selected
       if (selected == true) {
         selectedApps.add(packageName);
       }
-
       // Removes the app if it was unselected
       else {
         selectedApps.remove(packageName);
@@ -377,18 +261,15 @@ Future<void> loadData() async {
 
   // Shows instructions before opening Android permission settings
   void showPermissionInstructions() {
-
     showDialog(
       context: context,
       builder: (context) {
-
         return AlertDialog(
           title: const Text('Enable App Blocking'),
           content: const Text(
             'To enable app blocking, turn on the permissions in the Android settings that open. You will be prompted to enable both the App Blocker Accessibility and Alarms & reminders. Return to the app after enabling each permission.',
           ),
           actions: [
-
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -398,7 +279,6 @@ Future<void> loadData() async {
 
             FilledButton(
               onPressed: () async {
-
                 Navigator.pop(context);
 
                 // Opens Android settings for the required permission
@@ -415,37 +295,35 @@ Future<void> loadData() async {
     );
   }
 
+  // Loads saved data before updating the app blocking
+  Future<void> startApp() async {
+    // Waits until all saved data is loaded
+    await loadData();
+    // Updates the app blocking status after loading the data
+    await updateAppBlocking();
+  }
+
   // Runs when MainPage first starts
   @override
   void initState() {
     super.initState();
 
     // Loads the saved data when the app starts
-    loadData();
+    startApp();
 
     // Delays the permission instructions to allow the app to fully load before showing the dialog
-    Future.delayed(
-      const Duration(milliseconds: 500),
-      () {
-        checkBlockerPermission();
-      },
-    );
-
-    // Updates the app blocking status when the app first starts
-    updateAppBlocking();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      checkBlockerPermission();
+    });
 
     // Runs every minute so the current time is checked again
-    restrictionTimer = Timer.periodic(
-      const Duration(minutes: 1),
-      (timer) {
+    restrictionTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      // Updates the state of the app to check if it is restriction time again
+      setState(() {});
 
-        // Updates the state of the app to check if it is restriction time again
-        setState(() {});
-
-        // Updates the app blocking status after checking the time
-        updateAppBlocking();
-      },
-    );
+      // Updates the app blocking status after checking the time
+      updateAppBlocking();
+    });
   }
 
   // Cancels the timer when MainPage is closed
@@ -454,7 +332,6 @@ Future<void> loadData() async {
     restrictionTimer?.cancel();
     super.dispose();
   }
-
 
   // Opens a time picker for the restriction start time
   Future<void> pickRestrictionStartTime(BuildContext context) async {
@@ -468,15 +345,13 @@ Future<void> loadData() async {
         restrictionStartTime = pickedTime;
       });
 
-    // Saves new restriction time
-    saveData();
+      // Saves new restriction time
+      saveData();
 
       // Updates the app blocking status after changing the restriction start time
       updateAppBlocking();
     }
-
   }
-
 
   // Opens a time picker for the restriction end time
   Future<void> pickRestrictionEndTime(BuildContext context) async {
@@ -497,62 +372,56 @@ Future<void> loadData() async {
       updateAppBlocking();
     }
   }
+
   // Checks if the current time is inside the restriction period
   bool isRestrictionTime() {
-
     // Gets the current time
     TimeOfDay currentTime = TimeOfDay.now();
 
     // Converts each time into minutes
-    int currentMinutes =
-        currentTime.hour * 60 + currentTime.minute;
+    int currentMinutes = currentTime.hour * 60 + currentTime.minute;
 
     int startMinutes =
         restrictionStartTime.hour * 60 + restrictionStartTime.minute;
 
-    int endMinutes =
-        restrictionEndTime.hour * 60 + restrictionEndTime.minute;
+    int endMinutes = restrictionEndTime.hour * 60 + restrictionEndTime.minute;
 
+    // No restriction if start and end times are the same
+    if (startMinutes == endMinutes) {
+      return false;
+    }
 
     // Restriction starts and ends on the same day
     if (startMinutes < endMinutes) {
-
-      if (currentMinutes >= startMinutes &&
-          currentMinutes < endMinutes) {
+      if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
         return true;
       }
     }
-
-
     // Restriction goes overnight
     else {
-
-      if (currentMinutes >= startMinutes ||
-          currentMinutes < endMinutes) {
+      if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
         return true;
       }
     }
-
 
     return false;
   }
 
-    // Filters objectives into a list of objectives of the current date
-    List<Map<String, dynamic>> get todayObjectives {
-      List<Map<String, dynamic>> today = [];
+  // Filters objectives into a list of objectives of the current date
+  List<Map<String, dynamic>> get todayObjectives {
+    List<Map<String, dynamic>> today = [];
 
-      for (var objective in objectives) {
-        if (objective['date'] == todayDate) {
-          today.add(objective);
-        }
+    for (var objective in objectives) {
+      if (objective['date'] == todayDate) {
+        today.add(objective);
       }
+    }
 
     return today;
   }
 
   // Checks if all the objectives in the current date have been completed
   bool get allTodayObjectivesCompleted {
-    
     // False if there are not any objectives for the day
     if (todayObjectives.isEmpty) {
       return false;
@@ -566,22 +435,19 @@ Future<void> loadData() async {
     }
 
     return true;
-      }
+  }
 
   // Checks if social media should currently be locked
   bool shouldLockSocialMedia() {
-
     // Locks social media if today's objectives are not completed
     if (allTodayObjectivesCompleted == false) {
       return true;
     }
 
-
     // Locks social media if it is currently restriction time
     if (isRestrictionTime() == true) {
       return true;
     }
-
 
     // Unlocks social media if all objectives are completed and it is not restriction time
     return false;
@@ -589,13 +455,10 @@ Future<void> loadData() async {
 
   // Updates whether the social media apps are blocked or unblocked
   Future<void> updateAppBlocking() async {
-
     // Blocks the social media apps if they should be locked
     if (shouldLockSocialMedia() == true) {
       await appBlocker.blockApps(selectedApps);
     }
-
-
     // Unblocks the social media apps if they should be unlocked
     else {
       await appBlocker.unblockApps(selectedApps);
@@ -604,7 +467,12 @@ Future<void> loadData() async {
 
   // Adds a new objective to list with title, current date, and completed as false
   void addObjective(String title, String date) {
-    final newObjective = {'id': nextObjectiveId, 'title': title, 'date': date, 'completed': false};
+    final newObjective = {
+      'id': nextObjectiveId,
+      'title': title,
+      'date': date,
+      'completed': false,
+    };
 
     // Updates the state of the app to include the new objective
     setState(() {
@@ -624,7 +492,6 @@ Future<void> loadData() async {
   // Changes objective between completed and incompleted
   void toggleObjectiveCompleted(int id) {
     setState(() {
-
       // Searches through all objectives and toggles the completed status of the one with the matching title
       for (final objective in objectives) {
         if (objective['id'] == id) {
@@ -657,41 +524,43 @@ Future<void> loadData() async {
 
   @override
   Widget build(BuildContext context) {
-
     // List of pages in the app
     final List<Widget> pages = [
-      HomeSection(  
-      todayObjectives: todayObjectives,
-      onAddObjective: addObjective,
-      onToggleObjectiveCompleted: toggleObjectiveCompleted,
-      isRestrictionTime: isRestrictionTime(),
-      // Pass lock status to HomeSection
-      shouldLock: shouldLockSocialMedia()
+      HomeSection(
+        todayObjectives: todayObjectives,
+        onAddObjective: addObjective,
+        onToggleObjectiveCompleted: toggleObjectiveCompleted,
+        isRestrictionTime: isRestrictionTime(),
+        // Pass lock status to HomeSection
+        shouldLock: shouldLockSocialMedia(),
       ), // Pass data and functions to HomeSection
-      ObjectivesSection(objectives: objectives, addObjective: addObjective, toggleObjectiveCompleted: toggleObjectiveCompleted, deleteObjective: deleteobjective),
+      ObjectivesSection(
+        objectives: objectives,
+        addObjective: addObjective,
+        toggleObjectiveCompleted: toggleObjectiveCompleted,
+        deleteObjective: deleteobjective,
+      ),
       AnalyticsSection(
         // Pass usage data and function to AnalyticsSection
         todayUsage: todayUsage,
         thisWeekUsage: thisWeekUsage,
-        lastWeekUsage: lastWeekUsage,
         updateAnalytics: updateAnalytics,
       ),
       SettingsSection(
-      // Pass restriction times and functions to SettingsSection
-      restrictionStartTime: restrictionStartTime,
-      restrictionEndTime: restrictionEndTime,
-      pickStartTime: pickRestrictionStartTime,
-      pickEndTime: pickRestrictionEndTime,
-      // Pass app selection data and functions to SettingsSection
-      installedApps: installedApps,
-      selectedApps: selectedApps,
-      loadInstalledApps: loadInstalledApps,
-      selectApp: selectApp,
-    ),
+        // Pass restriction times and functions to SettingsSection
+        restrictionStartTime: restrictionStartTime,
+        restrictionEndTime: restrictionEndTime,
+        pickStartTime: pickRestrictionStartTime,
+        pickEndTime: pickRestrictionEndTime,
+        // Pass app selection data and functions to SettingsSection
+        installedApps: installedApps,
+        selectedApps: selectedApps,
+        loadInstalledApps: loadInstalledApps,
+        selectApp: selectApp,
+      ),
     ];
 
     return Scaffold(
-
       // App bar shown at the top of the page with title of current page
       appBar: AppBar(title: Text(pageTitles[selectedIndex]), centerTitle: true),
       body: pages[selectedIndex],
@@ -722,7 +591,6 @@ Future<void> loadData() async {
 
 // Widget for home section
 class HomeSection extends StatefulWidget {
-
   // Stores if social media should be locked or unlocked
   final bool shouldLock;
 
@@ -735,7 +603,6 @@ class HomeSection extends StatefulWidget {
 
   // Checks if the current time is within the restriction period
   final bool isRestrictionTime;
-
 
   const HomeSection({
     super.key,
@@ -752,23 +619,17 @@ class HomeSection extends StatefulWidget {
   }
 }
 
-
 class _HomeSectionState extends State<HomeSection> {
-
   // Controller for the quick add objective text field
-  final TextEditingController _objectiveController =
-      TextEditingController();
-
+  final TextEditingController _objectiveController = TextEditingController();
 
   // Gives the current date in proper format
   String get todayDate {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
   }
 
-
   // Adds a new objective for the current day
   void quickAddObjective() {
-
     // Gets the text from the text field
     String title = _objectiveController.text.trim();
 
@@ -784,15 +645,12 @@ class _HomeSectionState extends State<HomeSection> {
     _objectiveController.clear();
   }
 
-
   // Counts how many of today's objectives are completed
   int getCompletedCount() {
-
     int completedCount = 0;
 
     // Goes through each objective for today
     for (var objective in widget.todayObjectives) {
-
       // Adds one to the count if the objective is completed
       if (objective['completed'] == true) {
         completedCount = completedCount + 1;
@@ -802,10 +660,8 @@ class _HomeSectionState extends State<HomeSection> {
     return completedCount;
   }
 
-
   // Checks if every objective for today has been completed
   bool checkAllCompleted() {
-
     // Returns false if there are no objectives today
     if (widget.todayObjectives.isEmpty) {
       return false;
@@ -813,7 +669,6 @@ class _HomeSectionState extends State<HomeSection> {
 
     // Goes through each objective for today
     for (var objective in widget.todayObjectives) {
-
       // Returns false if an objective has not been completed
       if (objective['completed'] == false) {
         return false;
@@ -824,10 +679,8 @@ class _HomeSectionState extends State<HomeSection> {
     return true;
   }
 
-
   @override
   Widget build(BuildContext context) {
-
     // Stores how many objectives are completed
     int completedCount = getCompletedCount();
 
@@ -840,20 +693,16 @@ class _HomeSectionState extends State<HomeSection> {
     if (widget.shouldLock == false) {
       lockMessage = 'Social media is currently unlocked.';
     }
-
     // Message if locked because of objectives and restricted time
-    else if (allCompleted == false &&
-        widget.isRestrictionTime == true) {
+    else if (allCompleted == false && widget.isRestrictionTime == true) {
       lockMessage =
           'Complete your objectives and wait until the restricted time is over to unlock social media.';
     }
-
     // Message if locked because objectives are incomplete
     else if (allCompleted == false) {
       lockMessage =
           'Complete your objectives for today to unlock social media access.';
     }
-
     // Message if locked only because of restricted time
     else if (widget.isRestrictionTime == true) {
       lockMessage =
@@ -864,7 +713,6 @@ class _HomeSectionState extends State<HomeSection> {
       padding: const EdgeInsets.all(16),
 
       children: [
-
         // Card showing whether social media is locked or unlocked
         Card(
           child: Padding(
@@ -872,7 +720,6 @@ class _HomeSectionState extends State<HomeSection> {
 
             child: Column(
               children: [
-
                 // Lock or unlock icon
                 Icon(
                   widget.shouldLock ? Icons.lock : Icons.lock_open,
@@ -897,18 +744,13 @@ class _HomeSectionState extends State<HomeSection> {
                 const SizedBox(height: 8),
 
                 // Message explaining the current lock status
-                Text(
-                  lockMessage,
-                  textAlign: TextAlign.center,
-                ),
+                Text(lockMessage, textAlign: TextAlign.center),
               ],
             ),
           ),
         ),
 
-
         const SizedBox(height: 12),
-
 
         // Card showing today's objective progress
         Card(
@@ -921,9 +763,7 @@ class _HomeSectionState extends State<HomeSection> {
           ),
         ),
 
-
         const SizedBox(height: 12),
-
 
         // Card containing quick add and today's objectives
         Card(
@@ -932,7 +772,6 @@ class _HomeSectionState extends State<HomeSection> {
 
             child: Column(
               children: [
-
                 // Text field for quickly adding an objective for today
                 TextField(
                   controller: _objectiveController,
@@ -943,9 +782,7 @@ class _HomeSectionState extends State<HomeSection> {
                   ),
                 ),
 
-
                 const SizedBox(height: 8),
-
 
                 // Button to add the objective
                 FilledButton(
@@ -953,22 +790,15 @@ class _HomeSectionState extends State<HomeSection> {
                   child: const Text('Add Objective'),
                 ),
 
-
                 const SizedBox(height: 16),
-
 
                 // Heading for today's objectives
                 const Text(
                   'Todays Objectives',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
 
-
                 const SizedBox(height: 8),
-
 
                 // Shows a message if there are no objectives today
                 if (widget.todayObjectives.isEmpty)
@@ -978,7 +808,6 @@ class _HomeSectionState extends State<HomeSection> {
                       'No objectives for today. Add some to get started!',
                     ),
                   ),
-
 
                 // Creates the list of today's objectives
                 if (widget.todayObjectives.isNotEmpty)
@@ -990,14 +819,11 @@ class _HomeSectionState extends State<HomeSection> {
                     itemCount: widget.todayObjectives.length,
 
                     itemBuilder: (context, index) {
-
                       // Gets the objective at the current position
-                      final objective =
-                          widget.todayObjectives[index];
+                      final objective = widget.todayObjectives[index];
 
                       return Card(
                         child: CheckboxListTile(
-
                           // Shows whether the objective is completed
                           value: objective['completed'],
 
@@ -1006,9 +832,7 @@ class _HomeSectionState extends State<HomeSection> {
 
                           // Changes the completed status when checkbox is pressed
                           onChanged: (value) {
-                            widget.onToggleObjectiveCompleted(
-                              objective['id'],
-                            );
+                            widget.onToggleObjectiveCompleted(objective['id']);
                           },
                         ),
                       );
@@ -1022,7 +846,6 @@ class _HomeSectionState extends State<HomeSection> {
     );
   }
 }
-
 
 // Widget for objectives section
 class ObjectivesSection extends StatefulWidget {
@@ -1047,10 +870,8 @@ class ObjectivesSection extends StatefulWidget {
 }
 
 class _ObjectivesSectionState extends State<ObjectivesSection> {
-
   // Controller for the text field where users input new objectives
-  final TextEditingController _objectiveController =
-    TextEditingController();
+  final TextEditingController _objectiveController = TextEditingController();
 
   // Stores the selected date
   DateTime selectedDate = DateTime.now();
@@ -1061,7 +882,7 @@ class _ObjectivesSectionState extends State<ObjectivesSection> {
       context: context,
       initialDate: selectedDate,
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365))
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
     // If a date is selected, save it
@@ -1074,7 +895,6 @@ class _ObjectivesSectionState extends State<ObjectivesSection> {
 
   // Adds a new objective
   void addObjective() {
-    
     // Gets the text from text field
     String title = _objectiveController.text.trim();
 
@@ -1088,93 +908,87 @@ class _ObjectivesSectionState extends State<ObjectivesSection> {
 
     // Calls the function to add the objective
     widget.addObjective(title, date);
-
   }
 
-@override
-Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
 
-  return Padding(
-    padding: const EdgeInsets.all(16.0),
-
-    child: Column(
-      children: [
-
-        // Text field for inputting new objectives
-        TextField(
-          controller: _objectiveController,
-          decoration: const InputDecoration(
-            labelText: 'New Objective',
-            border: OutlineInputBorder(),
+      child: Column(
+        children: [
+          // Text field for inputting new objectives
+          TextField(
+            controller: _objectiveController,
+            decoration: const InputDecoration(
+              labelText: 'New Objective',
+              border: OutlineInputBorder(),
+            ),
           ),
-        ),
-        const SizedBox(height: 8.0),
+          const SizedBox(height: 8.0),
 
-        // Button to pick a date for the new objective
-        FilledButton(
-          onPressed: () => pickDate(context),
-          child: Text(
-            'Pick Date: ${DateFormat('dd-MM-yyyy').format(selectedDate)}',
+          // Button to pick a date for the new objective
+          FilledButton(
+            onPressed: () => pickDate(context),
+            child: Text(
+              'Pick Date: ${DateFormat('dd-MM-yyyy').format(selectedDate)}',
+            ),
           ),
-        ),
-        const SizedBox(height: 8.0),
+          const SizedBox(height: 8.0),
 
-        // Button to add the new objective
-        FilledButton(
-          onPressed: addObjective,
-          child: const Text('Add Objective'),
-        ),
-        const SizedBox(height: 16.0),
+          // Button to add the new objective
+          FilledButton(
+            onPressed: addObjective,
+            child: const Text('Add Objective'),
+          ),
+          const SizedBox(height: 16.0),
 
-      // Displays the list of objectives
-      Expanded(
-          child: ListView.builder(
-            itemCount: widget.objectives.length,
-            itemBuilder: (context, index) {
-              final objective = widget.objectives[index];
-              return Card(
-                child: ListTile(
+          // Displays the list of objectives
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.objectives.length,
+              itemBuilder: (context, index) {
+                final objective = widget.objectives[index];
+                return Card(
+                  child: ListTile(
+                    // Objective title
+                    title: Text(objective['title']),
 
-                  // Objective title
-                  title: Text(objective['title']),
+                    // Date of the objective
+                    subtitle: Text('Date: ${objective['date']}'),
 
-                  // Date of the objective
-                  subtitle: Text('Date: ${objective['date']}'),
+                    // Checkbox to mark objective as completed
+                    leading: Checkbox(
+                      value: objective['completed'],
+                      onChanged: (value) {
+                        widget.toggleObjectiveCompleted(objective['id']);
+                      },
+                    ),
 
-                  // Checkbox to mark objective as completed
-                  leading: Checkbox(
-                    value: objective['completed'],
-                    onChanged: (value) {
-                      widget.toggleObjectiveCompleted(objective['id']);
-                    },
+                    // Delete button to remove the objective
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        widget.deleteObjective(objective['id']);
+                      },
+                    ),
                   ),
-
-                    
-                  // Delete button to remove the objective
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      widget.deleteObjective(objective['id']);
-                    },
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
-}
-  
+
 // Widget for analytics section
 
 // Widget for analytics section
 class AnalyticsSection extends StatelessWidget {
   final int todayUsage;
   final int thisWeekUsage;
-  final int lastWeekUsage;
 
   final Function() updateAnalytics;
 
@@ -1182,7 +996,6 @@ class AnalyticsSection extends StatelessWidget {
     super.key,
     required this.todayUsage,
     required this.thisWeekUsage,
-    required this.lastWeekUsage,
     required this.updateAnalytics,
   });
 
@@ -1208,15 +1021,7 @@ class AnalyticsSection extends StatelessWidget {
               subtitle: Text('$thisWeekUsage minutes'),
             ),
           ),
-          const SizedBox(height: 8.0),
 
-          // Card showing last week's social media usage
-          Card(
-            child: ListTile(
-              title: const Text('Last Week\'s Usage'),
-              subtitle: Text('$lastWeekUsage minutes'),
-            ),
-          ),
           const SizedBox(height: 16.0),
           // Button to refresh the analytics data
           FilledButton(
@@ -1236,14 +1041,13 @@ class AnalyticsSection extends StatelessWidget {
 
 // Widget for settings section
 class SettingsSection extends StatelessWidget {
-
   final TimeOfDay restrictionStartTime;
   final TimeOfDay restrictionEndTime;
 
   final Function(BuildContext) pickStartTime;
   final Function(BuildContext) pickEndTime;
 
-    // Stores the installed apps
+  // Stores the installed apps
   final List<AppInfo> installedApps;
 
   // Stores the apps selected to be blocked
@@ -1252,7 +1056,6 @@ class SettingsSection extends StatelessWidget {
   // Functions used to load and select apps
   final Function() loadInstalledApps;
   final Function(String, bool) selectApp;
-
 
   const SettingsSection({
     super.key,
@@ -1266,35 +1069,27 @@ class SettingsSection extends StatelessWidget {
     required this.selectApp,
   });
 
-
+  // Builds the settings section UI
   @override
   Widget build(BuildContext context) {
-
     return Padding(
       padding: const EdgeInsets.all(16),
 
       child: Column(
         children: [
-
           const Text(
             'Restriction Period',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 20),
-
 
           // Restriction start time
           Card(
             child: ListTile(
               title: const Text('Start Time'),
 
-              subtitle: Text(
-                restrictionStartTime.format(context),
-              ),
+              subtitle: Text(restrictionStartTime.format(context)),
 
               trailing: const Icon(Icons.access_time),
 
@@ -1304,18 +1099,14 @@ class SettingsSection extends StatelessWidget {
             ),
           ),
 
-
           const SizedBox(height: 10),
-
 
           // Restriction end time
           Card(
             child: ListTile(
               title: const Text('End Time'),
 
-              subtitle: Text(
-                restrictionEndTime.format(context),
-              ),
+              subtitle: Text(restrictionEndTime.format(context)),
 
               trailing: const Icon(Icons.access_time),
 
@@ -1326,61 +1117,51 @@ class SettingsSection extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
+          // Heading for selecting apps to block
+          const Text(
+            'Apps to Block',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
 
-// Heading for selecting apps to block
-const Text(
-  'Apps to Block',
-  style: TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
-  ),
-),
+          const SizedBox(height: 10),
 
-  const SizedBox(height: 10),
+          // Button used to load the apps installed on the device
+          FilledButton(
+            onPressed: () {
+              loadInstalledApps();
+            },
+            child: const Text('Choose Apps'),
+          ),
 
-  // Button used to load the apps installed on the device
-  FilledButton(
-    onPressed: () {
-      loadInstalledApps();
-    },
-    child: const Text('Choose Apps'),
-  ),
+          const SizedBox(height: 10),
 
-  const SizedBox(height: 10),
+          // Displays the installed apps
+          Expanded(
+            child: ListView.builder(
+              // Number of installed apps
+              itemCount: installedApps.length,
 
+              itemBuilder: (context, index) {
+                // Gets the app at the current position
+                final app = installedApps[index];
 
-  // Displays the installed apps
-  Expanded(
-    child: ListView.builder(
+                return CheckboxListTile(
+                  // Shows the app name
+                  title: Text(app.appName),
 
-      // Number of installed apps
-      itemCount: installedApps.length,
+                  // Shows whether the app is selected
+                  value: selectedApps.contains(app.packageName),
 
-      itemBuilder: (context, index) {
-
-        // Gets the app at the current position
-        final app = installedApps[index];
-
-        return CheckboxListTile(
-
-          // Shows the app name
-          title: Text(app.appName),
-
-          // Shows whether the app is selected
-          value: selectedApps.contains(app.packageName),
-
-          // Changes the selected status when checkbox is pressed
-          onChanged: (value) {
-
-            if (value != null) {
-              selectApp(app.packageName, value);
-            }
-          },
-        );
-      },
-    ),
-  ),
-
+                  // Changes the selected status when checkbox is pressed
+                  onChanged: (value) {
+                    if (value != null) {
+                      selectApp(app.packageName, value);
+                    }
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
