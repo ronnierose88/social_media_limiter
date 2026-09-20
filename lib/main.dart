@@ -508,7 +508,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   // Deletes an objective with the matching title from the list of objectives
-  void deleteobjective(int id) {
+  void deleteObjective(int id) {
     setState(() {
       objectives.removeWhere((objective) {
         return objective['id'] == id;
@@ -538,7 +538,7 @@ class _MainPageState extends State<MainPage> {
         objectives: objectives,
         addObjective: addObjective,
         toggleObjectiveCompleted: toggleObjectiveCompleted,
-        deleteObjective: deleteobjective,
+        deleteObjective: deleteObjective,
       ),
       AnalyticsSection(
         // Pass usage data and function to AnalyticsSection
