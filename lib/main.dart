@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:app_blocker/app_blocker.dart';
+import 'package:app_usage/app_usage.dart';
 
 // Starting point of application, launches SocialMediaLimiter widget
 void main() {
@@ -65,22 +66,28 @@ class _MainPageState extends State<MainPage> {
     'Settings',
   ];
 
-  // Stores the package names of the social media apps to block
-  final List<String> socialMediaApps = [
-    // Instagram, TikTok, Snapchat, Facebook, X/Twitter, YouTube
-    'com.instagram.android',
-    'com.zhiliaoapp.musically',
-    'com.snapchat.android',
-    'com.facebook.katana',
-    'com.twitter.android',
-    'com.google.android.youtube',
-  ];
   // App blocker used to block social media apps
   final AppBlocker appBlocker = AppBlocker.instance;
+
+  // Stores the apps installed on the device
+  List<AppInfo> installedApps = [];
+
+  // Stores the social media apps to be blocked
+  List<String> selectedApps = [];
 
   // Gives the current date in proper format
   String get todayDate {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
+  }
+
+  // Loads the apps installed on the device
+  Future<void> loadInstalledApps() async {
+
+    // Gets the installed apps using app_blocker
+    installedApps = await appBlocker.getApps();
+
+    // Updates the app so the installed apps are shown
+    setState(() {});
   }
 
   // Checks if app blocking permission has already been enabled
@@ -92,6 +99,27 @@ class _MainPageState extends State<MainPage> {
     if (status != BlockerPermissionStatus.granted) {
       showPermissionInstructions();
     }
+  }
+
+  // Changes whether an app is selected to be blocked
+  void selectApp(String packageName, bool selected) {
+
+    setState(() {
+
+      // Adds the app if it was selected
+      if (selected == true) {
+        selectedApps.add(packageName);
+      }
+
+      // Removes the app if it was unselected
+      else {
+        selectedApps.remove(packageName);
+      }
+    });
+
+
+    // Updates the apps being blocked
+    updateAppBlocking();
   }
 
   // Shows instructions before opening Android permission settings
@@ -300,13 +328,13 @@ class _MainPageState extends State<MainPage> {
 
     // Blocks the social media apps if they should be locked
     if (shouldLockSocialMedia() == true) {
-      await appBlocker.blockApps(socialMediaApps);
+      await appBlocker.blockApps(selectedApps);
     }
 
 
     // Unblocks the social media apps if they should be unlocked
     else {
-      await appBlocker.unblockApps(socialMediaApps);
+      await appBlocker.unblockApps(selectedApps);
     }
   }
 
@@ -371,6 +399,11 @@ class _MainPageState extends State<MainPage> {
       restrictionEndTime: restrictionEndTime,
       pickStartTime: pickRestrictionStartTime,
       pickEndTime: pickRestrictionEndTime,
+      // Pass app selection data and functions to SettingsSection
+      installedApps: installedApps,
+      selectedApps: selectedApps,
+      loadInstalledApps: loadInstalledApps,
+      selectApp: selectApp,
     ),
     ];
 
@@ -873,6 +906,16 @@ class SettingsSection extends StatelessWidget {
   final Function(BuildContext) pickStartTime;
   final Function(BuildContext) pickEndTime;
 
+    // Stores the installed apps
+  final List<AppInfo> installedApps;
+
+  // Stores the apps selected to be blocked
+  final List<String> selectedApps;
+
+  // Functions used to load and select apps
+  final Function() loadInstalledApps;
+  final Function(String, bool) selectApp;
+
 
   const SettingsSection({
     super.key,
@@ -880,6 +923,10 @@ class SettingsSection extends StatelessWidget {
     required this.restrictionEndTime,
     required this.pickStartTime,
     required this.pickEndTime,
+    required this.installedApps,
+    required this.selectedApps,
+    required this.loadInstalledApps,
+    required this.selectApp,
   });
 
 
@@ -940,6 +987,62 @@ class SettingsSection extends StatelessWidget {
               },
             ),
           ),
+          const SizedBox(height: 20),
+
+
+// Heading for selecting apps to block
+const Text(
+  'Apps to Block',
+  style: TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+  const SizedBox(height: 10),
+
+  // Button used to load the apps installed on the device
+  FilledButton(
+    onPressed: () {
+      loadInstalledApps();
+    },
+    child: const Text('Choose Apps'),
+  ),
+
+  const SizedBox(height: 10),
+
+
+  // Displays the installed apps
+  Expanded(
+    child: ListView.builder(
+
+      // Number of installed apps
+      itemCount: installedApps.length,
+
+      itemBuilder: (context, index) {
+
+        // Gets the app at the current position
+        final app = installedApps[index];
+
+        return CheckboxListTile(
+
+          // Shows the app name
+          title: Text(app.appName),
+
+          // Shows whether the app is selected
+          value: selectedApps.contains(app.packageName),
+
+          // Changes the selected status when checkbox is pressed
+          onChanged: (value) {
+
+            if (value != null) {
+              selectApp(app.packageName, value);
+            }
+          },
+        );
+      },
+    ),
+  ),
 
         ],
       ),
