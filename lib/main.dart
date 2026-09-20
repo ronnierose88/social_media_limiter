@@ -55,6 +55,17 @@ class _MainPageState extends State<MainPage> {
   // Stores the next objective ID to be assigned
   int nextObjectiveId = 0;
 
+  // Stores today's total social media usage in minutes
+  int todayUsage = 0;
+
+
+  // Stores this week's total social media usage in minutes
+  int thisWeekUsage = 0;
+
+
+  // Stores last week's total social media usage in minutes
+  int lastWeekUsage = 0;
+
   // Stores all objectives, each containing title, date, and completed
   List<Map<String, dynamic>> objectives = [];
 
@@ -78,6 +89,246 @@ class _MainPageState extends State<MainPage> {
   // Gives the current date in proper format
   String get todayDate {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
+  }
+
+  // Calculates total social media usage between two dates
+  Future<int> calculateUsage(
+      DateTime startDate,
+      DateTime endDate) async {
+
+    // Gets the app usage between the selected dates
+    List<AppUsageInfo> usageInfo =
+        await AppUsage().getAppUsage(startDate, endDate);
+
+    int totalMinutes = 0;
+
+    // Goes through each app returned
+    for (final app in usageInfo) {
+
+      // Only counts the usage of the apps that are selected to be blocked
+      if (selectedApps.contains(app.packageName)) {
+
+        // Adds the app usage to the total
+        totalMinutes =
+            totalMinutes + app.usage.inMinutes;
+      }
+    }
+
+    // Returns the total usage
+    return totalMinutes;
+  }
+
+  // Saves the app data
+  Future<void> saveData() async {
+
+    // Gets access to shared preferences
+    final prefs =
+        await SharedPreferences.getInstance();
+
+
+    // Converts the objectives list into text
+    String objectivesText =
+        jsonEncode(objectives);
+
+
+    // Saves the objectives
+    await prefs.setString(
+      'objectives',
+      objectivesText,
+    );
+
+
+    // Saves the next objective ID
+    await prefs.setInt(
+      'nextObjectiveId',
+      nextObjectiveId,
+    );
+
+
+    // Saves the restriction start time
+    await prefs.setInt(
+      'restrictionStartHour',
+      restrictionStartTime.hour,
+    );
+
+    await prefs.setInt(
+      'restrictionStartMinute',
+      restrictionStartTime.minute,
+    );
+
+
+    // Saves the restriction end time
+    await prefs.setInt(
+      'restrictionEndHour',
+      restrictionEndTime.hour,
+    );
+
+    await prefs.setInt(
+      'restrictionEndMinute',
+      restrictionEndTime.minute,
+    );
+
+
+    // Saves the apps selected to be blocked
+    await prefs.setStringList(
+      'selectedApps',
+      selectedApps,
+    );
+  }
+
+// Loads the saved app data
+Future<void> loadData() async {
+
+  // Gets access to shared preferences
+  final prefs =
+      await SharedPreferences.getInstance();
+
+
+  // Gets the saved objectives
+  String? objectivesText =
+      prefs.getString('objectives');
+
+
+  // Loads the objectives if they have been saved before
+  if (objectivesText != null) {
+
+    // Converts the saved text back into a list
+    List<dynamic> savedObjectives =
+        jsonDecode(objectivesText);
+
+
+    objectives =
+        savedObjectives
+            .map((objective) =>
+                Map<String, dynamic>.from(objective))
+            .toList();
+  }
+
+
+  // Gets the saved next objective ID
+  int? savedNextObjectiveId =
+      prefs.getInt('nextObjectiveId');
+
+
+  // Loads the next objective ID if it exists
+  if (savedNextObjectiveId != null) {
+    nextObjectiveId =
+        savedNextObjectiveId;
+  }
+
+
+  // Gets the saved restriction start time
+  int? startHour =
+      prefs.getInt('restrictionStartHour');
+
+  int? startMinute =
+      prefs.getInt('restrictionStartMinute');
+
+
+  // Gets the saved restriction end time
+  int? endHour =
+      prefs.getInt('restrictionEndHour');
+
+  int? endMinute =
+      prefs.getInt('restrictionEndMinute');
+
+
+  // Loads the start time if it exists
+  if (startHour != null &&
+      startMinute != null) {
+
+    restrictionStartTime =
+        TimeOfDay(
+          hour: startHour,
+          minute: startMinute,
+        );
+  }
+
+
+  // Loads the end time if it exists
+  if (endHour != null &&
+      endMinute != null) {
+
+    restrictionEndTime =
+        TimeOfDay(
+          hour: endHour,
+          minute: endMinute,
+        );
+  }
+
+
+  // Gets the saved selected apps
+  List<String>? savedSelectedApps =
+      prefs.getStringList('selectedApps');
+
+
+  // Loads the selected apps if they exist
+  if (savedSelectedApps != null) {
+    selectedApps =
+        savedSelectedApps;
+  }
+
+
+  // Updates the app with all the loaded data
+  setState(() {});
+}
+
+  // Calculates today's, this week's and last week's usage
+  Future<void> updateAnalytics() async {
+
+    // Gets the current date and time
+    DateTime now = DateTime.now();
+
+
+    // Gets the start of today
+    DateTime todayStart =
+        DateTime(now.year, now.month, now.day);
+
+
+    // Finds the start of the current week
+    DateTime thisWeekStart =
+        todayStart.subtract(
+          Duration(days: now.weekday - 1),
+        );
+
+
+    // Finds the start of last week
+    DateTime lastWeekStart =
+        thisWeekStart.subtract(
+          const Duration(days: 7),
+        );
+
+
+    // Calculates today's usage
+    int newTodayUsage =
+        await calculateUsage(
+          todayStart,
+          now,
+        );
+
+
+    // Calculates this week's usage
+    int newThisWeekUsage =
+        await calculateUsage(
+          thisWeekStart,
+          now,
+        );
+
+
+    // Calculates last week's usage
+    int newLastWeekUsage =
+        await calculateUsage(
+          lastWeekStart,
+          thisWeekStart,
+        );
+
+
+    // Updates the displayed usage values
+    setState(() {
+      todayUsage = newTodayUsage;
+      thisWeekUsage = newThisWeekUsage;
+      lastWeekUsage = newLastWeekUsage;
+    });
   }
 
   // Loads the apps installed on the device
@@ -117,6 +368,8 @@ class _MainPageState extends State<MainPage> {
       }
     });
 
+    // Saves the updated selected apps
+    saveData();
 
     // Updates the apps being blocked
     updateAppBlocking();
@@ -167,6 +420,9 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
 
+    // Loads the saved data when the app starts
+    loadData();
+
     // Delays the permission instructions to allow the app to fully load before showing the dialog
     Future.delayed(
       const Duration(milliseconds: 500),
@@ -211,6 +467,10 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         restrictionStartTime = pickedTime;
       });
+
+    // Saves new restriction time
+    saveData();
+
       // Updates the app blocking status after changing the restriction start time
       updateAppBlocking();
     }
@@ -229,6 +489,10 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         restrictionEndTime = pickedTime;
       });
+
+      // Saves new restriction time
+      saveData();
+
       // Updates the app blocking status after changing the restriction end time
       updateAppBlocking();
     }
@@ -349,6 +613,10 @@ class _MainPageState extends State<MainPage> {
       // Increases the next objective ID for the next objective to be added
       nextObjectiveId = nextObjectiveId + 1;
     });
+
+    // Saves the updated data after adding a new objective
+    saveData();
+
     // Updates the app blocking status after adding a new objective
     updateAppBlocking();
   }
@@ -364,6 +632,10 @@ class _MainPageState extends State<MainPage> {
         }
       }
     });
+
+    // Saves the updated data after toggling an objective's completed status
+    saveData();
+
     // Updates the app blocking status after toggling an objective's completed status
     updateAppBlocking();
   }
@@ -375,6 +647,10 @@ class _MainPageState extends State<MainPage> {
         return objective['id'] == id;
       });
     });
+
+    // Saves the updated data after deleting an objective
+    saveData();
+
     // Updates the app blocking status after deleting an objective
     updateAppBlocking();
   }
@@ -393,8 +669,15 @@ class _MainPageState extends State<MainPage> {
       shouldLock: shouldLockSocialMedia()
       ), // Pass data and functions to HomeSection
       ObjectivesSection(objectives: objectives, addObjective: addObjective, toggleObjectiveCompleted: toggleObjectiveCompleted, deleteObjective: deleteobjective),
-      const AnalyticsSection(),
+      AnalyticsSection(
+        // Pass usage data and function to AnalyticsSection
+        todayUsage: todayUsage,
+        thisWeekUsage: thisWeekUsage,
+        lastWeekUsage: lastWeekUsage,
+        updateAnalytics: updateAnalytics,
+      ),
       SettingsSection(
+      // Pass restriction times and functions to SettingsSection
       restrictionStartTime: restrictionStartTime,
       restrictionEndTime: restrictionEndTime,
       pickStartTime: pickRestrictionStartTime,
@@ -889,11 +1172,65 @@ Widget build(BuildContext context) {
 
 // Widget for analytics section
 class AnalyticsSection extends StatelessWidget {
-  const AnalyticsSection({super.key});
+  final int todayUsage;
+  final int thisWeekUsage;
+  final int lastWeekUsage;
+
+  final Function() updateAnalytics;
+
+  const AnalyticsSection({
+    super.key,
+    required this.todayUsage,
+    required this.thisWeekUsage,
+    required this.lastWeekUsage,
+    required this.updateAnalytics,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Analytics Section'));
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Card showing today's social media usage
+          Card(
+            child: ListTile(
+              title: const Text('Today\'s Usage'),
+              subtitle: Text('$todayUsage minutes'),
+            ),
+          ),
+          const SizedBox(height: 8.0),
+
+          // Card showing this week's social media usage
+          Card(
+            child: ListTile(
+              title: const Text('This Week\'s Usage'),
+              subtitle: Text('$thisWeekUsage minutes'),
+            ),
+          ),
+          const SizedBox(height: 8.0),
+
+          // Card showing last week's social media usage
+          Card(
+            child: ListTile(
+              title: const Text('Last Week\'s Usage'),
+              subtitle: Text('$lastWeekUsage minutes'),
+            ),
+          ),
+          const SizedBox(height: 16.0),
+          // Button to refresh the analytics data
+          FilledButton(
+            onPressed: updateAnalytics,
+            child: const Text('Refresh Analytics'),
+          ),
+          const Text(
+            'Note: You may be prompted to grant permission to access app usage data when refreshing analytics.',
+            style: TextStyle(fontSize: 12, color: Colors.black),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 }
 
