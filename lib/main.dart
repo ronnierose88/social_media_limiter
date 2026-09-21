@@ -60,7 +60,7 @@ class _MainPageState extends State<MainPage> {
   // Stores this week's total social media usage in minutes
   int thisWeekUsage = 0;
 
-  // Stores all objectives, each containing title, date, and completed
+  // Stores all objectives, each containing ID, title, date, and completed
   List<Map<String, dynamic>> objectives = [];
 
   // Titles for each page, used in AppBar
@@ -194,7 +194,7 @@ class _MainPageState extends State<MainPage> {
     setState(() {});
   }
 
-  // Calculates today's, this week's and last week's usage
+  // Calculates today's and this week's social media usage
   Future<void> updateAnalytics() async {
     // Gets the current date and time
     DateTime now = DateTime.now();
@@ -422,7 +422,7 @@ class _MainPageState extends State<MainPage> {
 
   // Checks if all the objectives in the current date have been completed
   bool get allTodayObjectivesCompleted {
-    // False if there are not any objectives for the day
+    // Unlocks social media if there are no objectives for today
     if (todayObjectives.isEmpty) {
       return true;
     }
@@ -465,7 +465,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  // Adds a new objective to list with title, current date, and completed as false
+  // Adds a new objective to list with ID, title, current date, and completed as false
   void addObjective(String title, String date) {
     final newObjective = {
       'id': nextObjectiveId,
