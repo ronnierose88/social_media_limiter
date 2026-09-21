@@ -267,7 +267,7 @@ class _MainPageState extends State<MainPage> {
         return AlertDialog(
           title: const Text('Enable App Blocking'),
           content: const Text(
-            'To enable app blocking, turn on the permissions in the Android settings that open. You will be prompted to enable both the App Blocker Accessibility and Alarms & reminders. Return to the app after enabling each permission.',
+            'To enable app blocking, turn on the permissions in the Android settings that open. You will be prompted to enable both the App Blocker Accessibility and Alarms & reminders. Return to the app after enabling each permission (You may have to press open settings multiple times due to multiple permissions).',
           ),
           actions: [
             TextButton(
@@ -424,7 +424,7 @@ class _MainPageState extends State<MainPage> {
   bool get allTodayObjectivesCompleted {
     // False if there are not any objectives for the day
     if (todayObjectives.isEmpty) {
-      return false;
+      return true;
     }
 
     // True if all the objectives are completed. False if any of them are not completed
@@ -492,7 +492,7 @@ class _MainPageState extends State<MainPage> {
   // Changes objective between completed and incompleted
   void toggleObjectiveCompleted(int id) {
     setState(() {
-      // Searches through all objectives and toggles the completed status of the one with the matching title
+      // Searches through all objectives and toggles the completed status of the one with the matching ID
       for (final objective in objectives) {
         if (objective['id'] == id) {
           objective['completed'] = !objective['completed'];
@@ -507,7 +507,7 @@ class _MainPageState extends State<MainPage> {
     updateAppBlocking();
   }
 
-  // Deletes an objective with the matching title from the list of objectives
+  // Deletes an objective with the matching ID from the list of objectives
   void deleteObjective(int id) {
     setState(() {
       objectives.removeWhere((objective) {
