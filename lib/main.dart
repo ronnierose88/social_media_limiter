@@ -664,7 +664,7 @@ class _HomeSectionState extends State<HomeSection> {
   bool checkAllCompleted() {
     // Returns false if there are no objectives today
     if (widget.todayObjectives.isEmpty) {
-      return false;
+      return true;
     }
 
     // Goes through each objective for today
